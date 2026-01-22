@@ -1,19 +1,43 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+.nav-links {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  display: flex;
+  gap: 12px;
+  z-index: 100;
 }
 
-body {
+.nav-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 10px;
   background: #e8eef5;
-  min-height: 100vh;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  box-shadow:
+    4px 4px 8px #c5ccd6,
+    -4px -4px 8px #ffffff;
+  color: #4b5563;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
 }
 
-#root {
-  max-width: 100%;
-  margin: 0;
-  padding: 0;
+.nav-btn:hover {
+  box-shadow:
+    2px 2px 4px #c5ccd6,
+    -2px -2px 4px #ffffff;
+  color: #2d3748;
+}
+
+.nav-btn-primary {
+  background: linear-gradient(135deg, #3b4a5a 0%, #2d3748 100%);
+  color: #ffffff;
+}
+
+.nav-btn-primary:hover {
+  background: linear-gradient(135deg, #4a5a6a 0%, #3d4758 100%);
+  color: #ffffff;
 }
 
 .container {
@@ -204,11 +228,22 @@ body {
 }
 
 @media (max-width: 900px) {
+  .nav-links {
+    top: 16px;
+    right: 16px;
+  }
+
+  .nav-btn {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
   .container {
     flex-direction: column;
     padding: 20px;
     justify-content: center;
     padding-right: 20px;
+    padding-top: 80px;
   }
 
   .left-section {
@@ -216,6 +251,7 @@ body {
     height: auto;
     padding-left: 0;
     align-items: center;
+    left: 0;
   }
 
   .microphone-image {
