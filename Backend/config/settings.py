@@ -37,6 +37,17 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    'rest_framework',
+    'rest_framework.authtoken', # 
+    'rest_framework_simplejwt', # 토큰 관리
+    'api',
+    # ★ 로그인용 추가
+    'dj_rest_auth',             # 로그인/로그아웃 API
+    'django.contrib.sites',     # allauth 필수
+    'allauth',                  # 회원가입
+    'allauth.account',
+    'allauth.socialaccount',    # 소셜 로그인용 (나중에 사용)
+    'dj_rest_auth.registration', # 회원가입 API
 ]
 
 MIDDLEWARE = [
@@ -47,6 +58,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    'allauth.account.middleware.AccountMiddleware', # 미들웨어 (없으면 에러)
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -73,9 +85,13 @@ WSGI_APPLICATION = "config.wsgi.application"
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'voxie_db',       # 서버에 만든 방 이름
+        'USER': 'voxie_user',     # 서버 접속 ID
+        'PASSWORD': '830d4e0fcf79a31051674d343ee7583ff004f148b53fb3bb46a28b60f6a8503e',       # 서버 접속 비번
+        'HOST': '210.114.22.108',   # (Cafe24 서버의 "공인 IP")
+        'PORT': '5432',           # 포트 번호
     }
 }
 
@@ -120,3 +136,49 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# 2. DRF 설정: "기본 인증 수단으로 JWT를 쓰겠다" 선언
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'dj_rest_auth.jwt_auth.JWTCookieAuthentication', # JWT 쿠키 인증
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated', # 기본적으로 로그인해야 접근 가능
+    ),
+}
+
+# 3. dj-rest-auth 설정 (JWT 활성화)
+REST_AUTH = {
+    'USE_JWT': True,                  # ★ 핵심: JWT 사용 켜기
+    'JWT_AUTH_COOKIE': 'voxie-auth',  # 쿠키 이름 설정
+    'JWT_AUTH_REFRESH_COOKIE': 'voxie-refresh',
+}
+
+# 4. Simple JWT 세부 설정 (유효기간 등)
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),  # 액세스 토큰 30분 유효
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),     # 재발급 토큰 7일 유효
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': True,
+}
+
+# 5. 사이트 ID (Allauth 필수 설정)
+SITE_ID = 1
+
+# 2. 로그인 방식 (이메일 말고 ID로 로그인)
+ACCOUNT_AUTHENTICATION_METHOD = 'username' 
+ACCOUNT_EMAIL_REQUIRED = True            # 가입할 때 이메일 
+ACCOUNT_UNIQUE_EMAIL = True              # 이메일 중복 금지
+ACCOUNT_USERNAME_REQUIRED = True         # ID(닉네임) 
+
+# 3. 이메일 인증 끄기 (개발용) ★ 이거 없으면 가입할 때 500 에러 터짐
+ACCOUNT_EMAIL_VERIFICATION = 'none'
+
+# 4. JWT 설정
+REST_USE_JWT = True
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60), # 토큰 1시간 유효
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),    # 재발급 7일
+}
