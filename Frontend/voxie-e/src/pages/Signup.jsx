@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 import '../styles/Signup.css'
 
 function Signup() {
   const navigate = useNavigate()
+  const { signup } = useAuth()
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -111,21 +113,14 @@ function Signup() {
     setIsLoading(true)
 
     try {
-      // TODO: API 연동
-      // const response = await fetch('/api/v1/users/signup', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(formData)
-      // })
-
-      console.log('Signup attempt:', formData)
-
-      // 임시로 로그인 페이지로 이동
-      setTimeout(() => {
-        navigate('/login')
-      }, 1000)
+      await signup({
+        email: formData.email,
+        nickname: formData.nickname,
+        password: formData.password,
+      })
+      navigate('/login')
     } catch (err) {
-      setErrors({ general: '회원가입에 실패했습니다. 다시 시도해주세요.' })
+      setErrors({ general: err.message || '회원가입에 실패했습니다. 다시 시도해주세요.' })
     } finally {
       setIsLoading(false)
     }
