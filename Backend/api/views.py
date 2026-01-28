@@ -1,4 +1,7 @@
 import time
+import io # <--- 추가됨
+from gtts import gTTS # <--- 추가됨
+from django.http import FileResponse # <--- 추가됨
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
@@ -6,25 +9,63 @@ from rest_framework import status
 from django.contrib.auth.models import User  # ★ DB 조회용 임포트
 
 # =================================================================
-# [Part 1] TTS & History (아직 기능 구현 전이라 Mock 데이터 유지)
+# [Part 1] TTS Generation (구글 TTS 적용됨)
 # =================================================================
 
 @api_view(['POST'])
-@permission_classes([AllowAny]) # 나중에 IsAuthenticated로 변경 필요
+@permission_classes([AllowAny])
 def tts_generate(request):
     """
-    [POST] TTS 음성 생성 요청
-    API: /api/v1/tts/generate
+    [POST] Piper TTS를 이용한 고품질 AI 음성 생성
+    - 모델: ko_KR-onnuri-medium (오픈소스 한국어 모델)
+    - 파일: .onnx (AI모델) + .json (설정파일) 사용
     """
-    # 프론트 로딩바 테스트를 위한 1초 딜레이
-    time.sleep(1)
-    
-    return Response({
-        "id": 101,
-        "status": "PENDING",
-        "message": "음성 생성이 요청되었습니다.",
-        "estimated_time": "5 seconds"
-    }, status=status.HTTP_201_CREATED)
+    text = request.data.get('text', '')
+    if not text:
+        return Response({"error": "텍스트를 입력해주세요."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # 1. 모델 파일이 저장될 경로 설정
+    model_dir = "/app/piper_models"
+    model_name = "ko_KR-onnuri-medium"
+    onnx_path = f"{model_dir}/{model_name}.onnx"
+    json_path = f"{model_dir}/{model_name}.onnx.json"
+    output_wav = f"/tmp/output_{os.getpid()}.wav" # 임시 결과 파일
+
+    try:
+        # 2. 모델 파일이 없으면 자동으로 다운로드 (최초 1회만 실행됨)
+        if not os.path.exists(onnx_path):
+            print("🚀 모델 파일이 없습니다. 다운로드를 시작합니다...")
+            os.makedirs(model_dir, exist_ok=True)
+            
+            # (1) .onnx 파일 다운로드 (약 60MB)
+            subprocess.run(
+                f"curl -L -o {onnx_path} https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/ko/ko_KR/onnuri/medium/ko_KR-onnuri-medium.onnx",
+                shell=True, check=True
+            )
+            # (2) .json 파일 다운로드 (설정 파일)
+            subprocess.run(
+                f"curl -L -o {json_path} https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/ko/ko_KR/onnuri/medium/ko_KR-onnuri-medium.onnx.json",
+                shell=True, check=True
+            )
+            print("✅ 모델 다운로드 완료!")
+
+        # 3. Piper 실행 (리눅스 명령어)
+        # echo "텍스트" | piper --model 모델파일 --output_file 결과파일
+        cmd = f'echo "{text}" | piper --model {onnx_path} --output_file {output_wav}'
+        subprocess.run(cmd, shell=True, check=True)
+
+        # 4. 생성된 WAV 파일을 읽어서 응답으로 전송
+        f = open(output_wav, 'rb')
+        return FileResponse(f, content_type='audio/wav')
+
+    except Exception as e:
+        print(f"❌ TTS Error: {str(e)}")
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# =================================================================
+# [Part 2] History & Voices (Mock 데이터 유지)
+# =================================================================
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -75,7 +116,7 @@ def history_list(request):
         "results": data
     })
 
-@api_view(['GET', 'DELETE']) # ★ DELETE 메서드 추가됨!
+@api_view(['GET', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def history_detail(request, history_id):
     """
@@ -113,11 +154,8 @@ def history_download(request, history_id):
 
 
 # =================================================================
-# [Part 2] User 관련 (★ 진짜 DB 조회 로직 구현됨)
+# [Part 3] User 관련 (★ DB 조회 유지)
 # =================================================================
-# ※ 주의: 로그인, 회원가입, 로그아웃, 토큰재발급, 프로필조회는 
-#    urls.py에서 dj-rest-auth 라이브러리와 직접 연결했으므로 여기엔 코드가 없어야 합니다!
-#    (중복 작성 시 헷갈림 방지)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
