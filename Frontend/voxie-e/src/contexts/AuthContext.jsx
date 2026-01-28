@@ -19,6 +19,8 @@ function translateError(msg) {
   return ERROR_MESSAGES[msg] || msg
 }
 
+const API_BASE = import.meta.env.VITE_API_URL || ''
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -33,7 +35,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   const login = async (username, password) => {
-    const response = await fetch('/api/v1/users/login', {
+    const response = await fetch(`${API_BASE}/api/v1/users/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -53,7 +55,7 @@ export function AuthProvider({ children }) {
   }
 
   const signup = async ({ email, nickname, password }) => {
-    const response = await fetch('/api/v1/users/signup', {
+    const response = await fetch(`${API_BASE}/api/v1/users/signup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -81,7 +83,7 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      await fetch('/api/v1/users/logout', {
+      await fetch(`${API_BASE}/api/v1/users/logout`, {
         method: 'POST',
         credentials: 'include',
       })
