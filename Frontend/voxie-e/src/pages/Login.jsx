@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 import '../styles/Login.css'
 
 function Login() {
   const navigate = useNavigate()
+  const { login } = useAuth()
   const [formData, setFormData] = useState({
-    email: '',
+    username: '',
     password: ''
   })
   const [error, setError] = useState('')
@@ -23,29 +25,18 @@ function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    if (!formData.email || !formData.password) {
-      setError('이메일과 비밀번호를 입력해주세요.')
+    if (!formData.username || !formData.password) {
+      setError('닉네임과 비밀번호를 입력해주세요.')
       return
     }
 
     setIsLoading(true)
 
     try {
-      // TODO: API 연동
-      // const response = await fetch('/api/v1/users/login', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(formData)
-      // })
-
-      console.log('Login attempt:', formData)
-
-      // 임시로 홈으로 이동
-      setTimeout(() => {
-        navigate('/')
-      }, 1000)
+      await login(formData.username, formData.password)
+      navigate('/')
     } catch (err) {
-      setError('로그인에 실패했습니다. 다시 시도해주세요.')
+      setError(err.message || '로그인에 실패했습니다. 다시 시도해주세요.')
     } finally {
       setIsLoading(false)
     }
@@ -66,16 +57,16 @@ function Login() {
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="input-group">
-            <label htmlFor="email">이메일</label>
+            <label htmlFor="username">닉네임</label>
             <div className="input-wrapper">
               <input
-                type="email"
-                id="email"
-                name="email"
-                placeholder="example@email.com"
-                value={formData.email}
+                type="text"
+                id="username"
+                name="username"
+                placeholder="닉네임을 입력하세요"
+                value={formData.username}
                 onChange={handleChange}
-                autoComplete="email"
+                autoComplete="username"
               />
             </div>
           </div>

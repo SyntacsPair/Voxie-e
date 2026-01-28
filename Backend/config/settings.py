@@ -48,11 +48,13 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',    # 소셜 로그인용 (나중에 사용)
     'dj_rest_auth.registration', # 회원가입 API
+    'corsheaders',               # CORS 허용
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -174,6 +176,13 @@ ACCOUNT_USERNAME_REQUIRED = True         # ID(닉네임)
 
 # 3. 이메일 인증 끄기 (개발용) ★ 이거 없으면 가입할 때 500 에러 터짐
 ACCOUNT_EMAIL_VERIFICATION = 'none'
+
+# CORS 설정 (프론트엔드 개발 서버 허용)
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+CORS_ALLOW_CREDENTIALS = True
 
 # 4. JWT 설정
 REST_USE_JWT = True
