@@ -1,7 +1,5 @@
 {
-  "buildCommand": "npm install && npm run build",
-  "installCommand": "npm install",
-  "outputDirectory": "dist",
-  "framework": "vite",
-  "devCommand": "npm run dev"
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "http://210.114.22.108:8000/api/:path*" }
+  ]
 }
