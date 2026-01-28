@@ -40,6 +40,25 @@
   color: #ffffff;
 }
 
+.nav-user-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  background: #e8eef5;
+  box-shadow:
+    inset 3px 3px 6px #c5ccd6,
+    inset -3px -3px 6px #ffffff;
+  color: #3b4a5a;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.nav-user-badge svg {
+  color: #6b7280;
+}
+
 .container {
   display: flex;
   align-items: center;

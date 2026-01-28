@@ -1,8 +1,11 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 import '../styles/Home.css'
 
 function Home() {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
   const [inputText, setInputText] = useState('')
   const [outputText, setOutputText] = useState('')
   const [isPlaying, setIsPlaying] = useState(false)
@@ -22,11 +25,30 @@ function Home() {
     setOutputText(inputText)
   }
 
+  const handleLogout = async () => {
+    await logout()
+    navigate('/')
+  }
+
   return (
     <div className="container">
       <nav className="nav-links">
-        <Link to="/login" className="nav-btn">로그인</Link>
-        <Link to="/signup" className="nav-btn nav-btn-primary">회원가입</Link>
+        {user ? (
+          <>
+            <div className="nav-user-badge">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+              </svg>
+              {user.username}
+            </div>
+            <button className="nav-btn" onClick={handleLogout}>로그아웃</button>
+          </>
+        ) : (
+          <>
+            <Link to="/login" className="nav-btn">로그인</Link>
+            <Link to="/signup" className="nav-btn nav-btn-primary">회원가입</Link>
+          </>
+        )}
       </nav>
 
       <div className="left-section">
