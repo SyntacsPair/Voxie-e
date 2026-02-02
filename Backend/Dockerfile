@@ -1,19 +1,24 @@
-# 1. 베이스 이미지 (파이썬 3.12가 깔린 리눅스를 가져와라)
+# 1. 파이썬 3.12 베이스
 FROM python:3.12-slim
 
-# 2. 작업 폴더 설정 (리눅스 내부의 /app 폴더에서 작업하겠다)
+# 2. 작업 폴더 설정 (컨테이너 내부)
 WORKDIR /app
 
-# 3. 필수 패키지 설치 (DB 관련 라이브러리 등)
-RUN sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list.d/debian.sources && \
-    apt-get update && \
-    apt-get install -y gcc libpq-dev && \
+# 3. 필수 프로그램 설치 (curl, tar는 Piper 다운로드용)
+RUN apt-get update && \
+    apt-get install -y curl tar && \
     rm -rf /var/lib/apt/lists/*
 
+# 4. Piper TTS 엔진 설치 (리눅스용)
+# 자동으로 다운받아서 /usr/local/bin에 설치함 -> 어디서든 'piper' 명령어가 먹힘
+RUN curl -L https://github.com/rhasspy/piper/releases/download/v1.2.0/piper_amd64.tar.gz | tar -xz -C /usr/local/bin --strip-components=1
+
+# 5. 파이썬 라이브러리 설치
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# 6. 소스 코드 복사 (이때 voice 폴더도 같이 복사됨!)
 COPY . .
 
+# 7. 서버 실행
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
-# docker build -t voxie-backend .
