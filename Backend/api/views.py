@@ -19,7 +19,7 @@ def tts_generate(request):
         return Response({"error": "텍스트를 입력해주세요."}, status=status.HTTP_400_BAD_REQUEST)
 
     # 서버 내부 경로 (수정 금지)
-    model_path = "/app/voice/KSS.onnx"
+    model_path = "/app/voice/KSS/KSS.onnx"
     output_wav = f"/tmp/output_{os.getpid()}.wav"
 
     try:
