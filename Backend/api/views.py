@@ -50,12 +50,10 @@ def tts_voices(request):
     API: /api/v1/tts/voices
     """
     data = [
-        {"id": 1, "name": "Alloy", "code": "alloy", "gender": "Neutral", "desc": "다목적, 중성적", "img_url": "/static/alloy.png"},
-        {"id": 2, "name": "Echo", "code": "echo", "gender": "Male", "desc": "부드러운 중저음", "img_url": "/static/echo.png"},
-        {"id": 3, "name": "Fable", "code": "fable", "gender": "British", "desc": "영국식 억양", "img_url": "/static/fable.png"},
-        {"id": 4, "name": "Onyx", "code": "onyx", "gender": "Male", "desc": "깊고 중후한 톤", "img_url": "/static/onyx.png"},
-        {"id": 5, "name": "Nova", "code": "nova", "gender": "Female", "desc": "차분하고 여성적", "img_url": "/static/nova.png"},
-        {"id": 6, "name": "Shimmer", "code": "shimmer", "gender": "Female", "desc": "맑고 깨끗한 톤", "img_url": "/static/shimmer.png"},
+        {"id": 1, "name": "SunHi", "code": "ko-KR-SunHiNeural", "gender": "Female", "lang": "한국어", "desc": "한국어 여성 음성"},
+        {"id": 2, "name": "InJoon", "code": "ko-KR-InJoonNeural", "gender": "Male", "lang": "한국어", "desc": "한국어 남성 음성"},
+        {"id": 3, "name": "Aria", "code": "en-US-AriaNeural", "gender": "Female", "lang": "English", "desc": "영어 여성 음성"},
+        {"id": 4, "name": "Guy", "code": "en-US-GuyNeural", "gender": "Male", "lang": "English", "desc": "영어 남성 음성"},
     ]
     return Response({"count": len(data), "results": data})
 
