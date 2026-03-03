@@ -10,14 +10,55 @@ from rest_framework import status
 from django.contrib.auth.models import User
 
 # =================================================================
-# [Helper Function] Edge-TTS 비동기 실행기
+# [Helper Function] Edge-TTS 비동기 실행기 (Speed 파라미터 추가!)
 # =================================================================
-def generate_edge_tts(text, output_file, voice="ko-KR-SunHiNeural"):
+def generate_edge_tts(text, output_file, voice="ko-KR-SunHiNeural", speed=1.0):
     """ 동기(Sync) 장고 뷰에서 비동기(Async) edge-tts를 실행하기 위한 헬퍼 함수 """
+    
+    # 프론트엔드의 1.0, 1.5 같은 배수를 edge-tts용 퍼센트 문자열(+50%, -20% 등)로 자동 변환
+    try:
+        rate_percent = int((float(speed) - 1.0) * 100)
+        rate_str = f"{rate_percent:+d}%" # 예: +50%, -20%, +0%
+    except ValueError:
+        rate_str = "+0%" # 숫자가 아닌 이상한 값이 오면 기본 속도로 방어
+
     async def _generate():
-        communicate = edge_tts.Communicate(text, voice)
+        communicate = edge_tts.Communicate(text, voice, rate=rate_str)
         await communicate.save(output_file)
+    
     asyncio.run(_generate())
+
+
+# =================================================================
+# [TTS Generate] Edge-TTS 실제 연동 (Speed 파라미터 추가!)
+# =================================================================
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def tts_generate(request):
+    """ [POST] /api/v1/generate : 음성 생성 """
+    text = request.data.get('text', '')
+    voice_code = request.data.get('voice', 'ko-KR-SunHiNeural') 
+    
+    # 프론트에서 넘어온 speed 값 (안 보내면 기본값 1.0)
+    speed_val = request.data.get('speed', 1.0) 
+    
+    if not text:
+        return Response({"error": "텍스트를 입력해주세요."}, status=status.HTTP_400_BAD_REQUEST)
+
+    temp_dir = tempfile.gettempdir()
+    output_mp3 = os.path.join(temp_dir, f"output_edge_{os.getpid()}.mp3")
+
+    try:
+        # 1. Edge-TTS로 MP3 파일 저장 (speed 전달)
+        generate_edge_tts(text, output_mp3, voice=voice_code, speed=speed_val)
+
+        # 2. 프론트엔드로 파일 전송
+        f = open(output_mp3, 'rb')
+        return FileResponse(f, content_type='audio/mpeg')
+
+    except Exception as e:
+        return Response({"error": f"Edge-TTS 변환 실패: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # =================================================================
@@ -43,35 +84,6 @@ def voice_list(request):
     ]
     return Response({"count": len(data), "results": data}, status=status.HTTP_200_OK)
 
-
-# =================================================================
-# [TTS Generate] Edge-TTS 실제 연동 (명세서 1순위)
-# =================================================================
-
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def tts_generate(request):
-    """ [POST] /api/generate : 음성 생성 (Edge-TTS 엔진 사용) """
-    text = request.data.get('text', '')
-    # 프론트에서 넘어온 voice 코드가 없으면 기본값 '선희(ko-KR-SunHiNeural)' 사용
-    voice_code = request.data.get('voice', 'ko-KR-SunHiNeural') 
-    
-    if not text:
-        return Response({"error": "텍스트를 입력해주세요."}, status=status.HTTP_400_BAD_REQUEST)
-
-    temp_dir = tempfile.gettempdir()
-    output_mp3 = os.path.join(temp_dir, f"output_edge_{os.getpid()}.mp3")
-
-    try:
-        # 1. Edge-TTS로 MP3 파일 저장
-        generate_edge_tts(text, output_mp3, voice=voice_code)
-
-        # 2. 프론트엔드로 파일 전송
-        f = open(output_mp3, 'rb')
-        return FileResponse(f, content_type='audio/mpeg')
-
-    except Exception as e:
-        return Response({"error": f"Edge-TTS 변환 실패: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
  # 더미) 스트리밍 응답 (실제 Edge-TTS 스트리밍이 아니므로 더미 데이터 반환)
 @api_view(['POST'])
