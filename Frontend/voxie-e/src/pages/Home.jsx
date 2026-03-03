@@ -68,7 +68,7 @@ function Home() {
     setOutputText(inputText)
 
     try {
-      const blob = await generateTTS(inputText)
+      const blob = await generateTTS(inputText, selectedVoice?.code || '')
       const url = URL.createObjectURL(blob)
 
       // 이전 URL 해제
@@ -253,10 +253,12 @@ function Home() {
                   onClick={() => setSelectedVoice(voice)}
                 >
                   <span className="voice-btn-name">{voice.name}</span>
-                  <span className={`voice-btn-gender voice-gender-${voice.gender.toLowerCase()}`}>
-                    {voice.gender}
-                  </span>
-                  <span className="voice-btn-desc">{voice.desc}</span>
+                  <div className="voice-btn-tags">
+                    <span className={`voice-btn-tag voice-gender-${voice.gender.toLowerCase()}`}>
+                      {voice.gender}
+                    </span>
+                    <span className="voice-btn-tag voice-lang">{voice.lang}</span>
+                  </div>
                 </button>
               ))}
             </div>

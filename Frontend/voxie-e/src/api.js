@@ -5,12 +5,12 @@ const API_BASE = ''
 // ===========================================
 
 /** TTS 음성 생성 (POST /api/v1/tts/generate) */
-export async function generateTTS(text) {
+export async function generateTTS(text, voice = '') {
   const response = await fetch(`${API_BASE}/api/v1/tts/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text, voice }),
   })
 
   if (!response.ok) {

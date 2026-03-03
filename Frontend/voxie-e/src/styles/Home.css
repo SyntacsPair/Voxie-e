@@ -200,7 +200,7 @@
 
 .voice-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
 }
 
@@ -252,7 +252,14 @@
   color: #3b4a5a;
 }
 
-.voice-btn-gender {
+.voice-btn-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.voice-btn-tag {
   font-size: 9px;
   padding: 1px 6px;
   border-radius: 4px;
@@ -270,20 +277,9 @@
   color: #b83280;
 }
 
-.voice-gender-neutral {
-  background: rgba(128, 90, 213, 0.15);
-  color: #6b46c1;
-}
-
-.voice-gender-british {
-  background: rgba(237, 137, 54, 0.15);
-  color: #c05621;
-}
-
-.voice-btn-desc {
-  font-size: 10px;
-  color: #8892a0;
-  text-align: center;
+.voice-lang {
+  background: rgba(107, 114, 128, 0.12);
+  color: #6b7280;
 }
 
 .bottom-row {
@@ -530,7 +526,7 @@
   }
 
   .voice-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .history-panel {
