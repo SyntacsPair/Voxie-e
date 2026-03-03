@@ -58,7 +58,7 @@ def tts_voices(request):
     return Response({"count": len(data), "results": data})
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def history_list(request):
     """
     [GET] 히스토리 목록 조회
@@ -90,7 +90,7 @@ def history_list(request):
     })
 
 @api_view(['GET', 'DELETE'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def history_detail(request, history_id):
     """
     [GET/DELETE] 히스토리 상세 조회 및 삭제
@@ -117,7 +117,7 @@ def history_detail(request, history_id):
         }, status=status.HTTP_204_NO_CONTENT)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def history_download(request, history_id):
     """
     [GET] 오디오 다운로드
