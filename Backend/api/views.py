@@ -1,3 +1,5 @@
+import os
+import subprocess
 import time
 import io # <--- 추가됨
 from gtts import gTTS # <--- 추가됨
@@ -16,47 +18,20 @@ from django.contrib.auth.models import User  # ★ DB 조회용 임포트
 @permission_classes([AllowAny])
 def tts_generate(request):
     """
-    [POST] Piper TTS를 이용한 고품질 AI 음성 생성
-    - 모델: ko_KR-onnuri-medium (오픈소스 한국어 모델)
-    - 파일: .onnx (AI모델) + .json (설정파일) 사용
+    [POST] Google TTS를 이용한 음성 생성
+    - gTTS 라이브러리 사용 (크로스 플랫폼 지원)
     """
     text = request.data.get('text', '')
     if not text:
         return Response({"error": "텍스트를 입력해주세요."}, status=status.HTTP_400_BAD_REQUEST)
 
-    # 1. 모델 파일이 저장될 경로 설정
-    model_dir = "/app/piper_models"
-    model_name = "ko_KR-onnuri-medium"
-    onnx_path = f"{model_dir}/{model_name}.onnx"
-    json_path = f"{model_dir}/{model_name}.onnx.json"
-    output_wav = f"/tmp/output_{os.getpid()}.wav" # 임시 결과 파일
-
     try:
-        # 2. 모델 파일이 없으면 자동으로 다운로드 (최초 1회만 실행됨)
-        if not os.path.exists(onnx_path):
-            print("🚀 모델 파일이 없습니다. 다운로드를 시작합니다...")
-            os.makedirs(model_dir, exist_ok=True)
-            
-            # (1) .onnx 파일 다운로드 (약 60MB)
-            subprocess.run(
-                f"curl -L -o {onnx_path} https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/ko/ko_KR/onnuri/medium/ko_KR-onnuri-medium.onnx",
-                shell=True, check=True
-            )
-            # (2) .json 파일 다운로드 (설정 파일)
-            subprocess.run(
-                f"curl -L -o {json_path} https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/ko/ko_KR/onnuri/medium/ko_KR-onnuri-medium.onnx.json",
-                shell=True, check=True
-            )
-            print("✅ 모델 다운로드 완료!")
+        tts = gTTS(text=text, lang='ko')
+        audio_buffer = io.BytesIO()
+        tts.write_to_fp(audio_buffer)
+        audio_buffer.seek(0)
 
-        # 3. Piper 실행 (리눅스 명령어)
-        # echo "텍스트" | piper --model 모델파일 --output_file 결과파일
-        cmd = f'echo "{text}" | piper --model {onnx_path} --output_file {output_wav}'
-        subprocess.run(cmd, shell=True, check=True)
-
-        # 4. 생성된 WAV 파일을 읽어서 응답으로 전송
-        f = open(output_wav, 'rb')
-        return FileResponse(f, content_type='audio/wav')
+        return FileResponse(audio_buffer, content_type='audio/mpeg', filename='tts_output.mp3')
 
     except Exception as e:
         print(f"❌ TTS Error: {str(e)}")

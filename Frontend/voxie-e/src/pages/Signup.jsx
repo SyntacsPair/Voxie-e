@@ -1,7 +1,17 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { checkEmailAvailability, checkNicknameAvailability } from '../api'
 import '../styles/Signup.css'
+
+// 디바운스 헬퍼
+function useDebounce(fn, delay) {
+  const timerRef = { current: null }
+  return useCallback((...args) => {
+    clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => fn(...args), delay)
+  }, [fn, delay])
+}
 
 function Signup() {
   const navigate = useNavigate()
@@ -13,6 +23,10 @@ function Signup() {
     nickname: ''
   })
   const [errors, setErrors] = useState({})
+  const [availability, setAvailability] = useState({
+    email: null,    // null | { is_available, message }
+    nickname: null,
+  })
   const [isLoading, setIsLoading] = useState(false)
 
   const validateEmail = (email) => {
@@ -30,6 +44,28 @@ function Signup() {
     return nicknameRegex.test(nickname)
   }
 
+  // 이메일 중복 검사 (디바운스)
+  const checkEmail = useDebounce(async (email) => {
+    if (!email || !validateEmail(email)) return
+    try {
+      const result = await checkEmailAvailability(email)
+      setAvailability((prev) => ({ ...prev, email: result }))
+    } catch {
+      setAvailability((prev) => ({ ...prev, email: null }))
+    }
+  }, 500)
+
+  // 닉네임 중복 검사 (디바운스)
+  const checkNickname = useDebounce(async (nickname) => {
+    if (!nickname || !validateNickname(nickname)) return
+    try {
+      const result = await checkNicknameAvailability(nickname)
+      setAvailability((prev) => ({ ...prev, nickname: result }))
+    } catch {
+      setAvailability((prev) => ({ ...prev, nickname: null }))
+    }
+  }, 500)
+
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => ({
@@ -41,10 +77,14 @@ function Signup() {
     const newErrors = { ...errors }
 
     if (name === 'email') {
+      setAvailability((prev) => ({ ...prev, email: null }))
       if (value && !validateEmail(value)) {
         newErrors.email = '올바른 이메일 형식을 입력해주세요.'
       } else {
         delete newErrors.email
+        if (value && validateEmail(value)) {
+          checkEmail(value)
+        }
       }
     }
 
@@ -65,10 +105,14 @@ function Signup() {
     }
 
     if (name === 'nickname') {
+      setAvailability((prev) => ({ ...prev, nickname: null }))
       if (value && !validateNickname(value)) {
         newErrors.nickname = '1~8자, 한글/영문/숫자만 가능합니다.'
       } else {
         delete newErrors.nickname
+        if (value && validateNickname(value)) {
+          checkNickname(value)
+        }
       }
     }
 
@@ -85,6 +129,8 @@ function Signup() {
       newErrors.email = '이메일을 입력해주세요.'
     } else if (!validateEmail(formData.email)) {
       newErrors.email = '올바른 이메일 형식을 입력해주세요.'
+    } else if (availability.email && !availability.email.is_available) {
+      newErrors.email = availability.email.message
     }
 
     if (!formData.password) {
@@ -103,6 +149,8 @@ function Signup() {
       newErrors.nickname = '닉네임을 입력해주세요.'
     } else if (!validateNickname(formData.nickname)) {
       newErrors.nickname = '1~8자, 한글/영문/숫자만 가능합니다.'
+    } else if (availability.nickname && !availability.nickname.is_available) {
+      newErrors.nickname = availability.nickname.message
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -154,6 +202,11 @@ function Signup() {
               />
             </div>
             {errors.email && <span className="field-error">{errors.email}</span>}
+            {!errors.email && availability.email && (
+              <span className={`field-availability ${availability.email.is_available ? 'available' : 'unavailable'}`}>
+                {availability.email.message}
+              </span>
+            )}
           </div>
 
           <div className="input-group">
@@ -170,6 +223,11 @@ function Signup() {
               />
             </div>
             {errors.nickname && <span className="field-error">{errors.nickname}</span>}
+            {!errors.nickname && availability.nickname && (
+              <span className={`field-availability ${availability.nickname.is_available ? 'available' : 'unavailable'}`}>
+                {availability.nickname.message}
+              </span>
+            )}
           </div>
 
           <div className="input-group">
