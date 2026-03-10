@@ -15,7 +15,7 @@ torch.load = safe_torch_load
 # ==========================================
 # ⚙️ 설정(Settings)
 # ==========================================
-TEXT = "고무고무~~총난타!!!"
+TEXT = "고무고무~~총난타!!!호"
 VOICE = "ko-KR-SunHiNeural"
 FINAL_AUDIO = "final_output.wav"    
 MODEL_PATH = r"D:\Voxie-e\Backend\Voice\Luffy.pth"

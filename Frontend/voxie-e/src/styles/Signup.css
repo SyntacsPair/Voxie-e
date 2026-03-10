@@ -111,6 +111,20 @@
   padding-left: 4px;
 }
 
+.field-availability {
+  font-size: 12px;
+  padding-left: 4px;
+  font-weight: 500;
+}
+
+.field-availability.available {
+  color: #2f855a;
+}
+
+.field-availability.unavailable {
+  color: #e53e3e;
+}
+
 .error-message {
   color: #e53e3e;
   font-size: 13px;
