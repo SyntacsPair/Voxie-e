@@ -1,6 +1,7 @@
 import os
 import tempfile
 import asyncio
+import uuid
 import edge_tts
 from django.http import FileResponse, StreamingHttpResponse
 from rest_framework.decorators import api_view, permission_classes
@@ -9,18 +10,37 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth.models import User
 
+from .rvc import convert_voice_with_rvc
+
 # =================================================================
-# [Helper Function] Edge-TTS 비동기 실행기 (Speed 파라미터 추가!)
+# ⚙️ [백엔드 전용] 캐릭터별 하드코딩 설정
+# =================================================================
+CHARACTER_SETTINGS = {
+    # 남성 캐릭터 (기본 여성 목소리에서 변조하므로 피치를 크게 내림)
+    "Trump": {"base_voice": "ko-KR-SunHiNeural", "pitch": -12},
+    "Zoro": {"base_voice": "ko-KR-SunHiNeural", "pitch": -12},
+    "MJ": {"base_voice": "ko-KR-SunHiNeural", "pitch": -12}, # 마이클 잭슨 등 남성이라 가정
+    
+    # 소년 캐릭터 (약간만 내림)
+    "Luffy": {"base_voice": "ko-KR-SunHiNeural", "pitch": -3},
+    
+    # 여성 캐릭터 (피치 변경 없음 또는 살짝 올림)
+    "NELL": {"base_voice": "ko-KR-SunHiNeural", "pitch": 0},
+    "Yandere": {"base_voice": "ko-KR-SunHiNeural", "pitch": 2}, # 얀데레 특유의 하이톤을 위해 살짝 높임
+    
+    # 기본값
+    "default": {"base_voice": "ko-KR-SunHiNeural", "pitch": 0}
+}
+
+# =================================================================
+# [Helper Function] Edge-TTS 비동기 실행기
 # =================================================================
 def generate_edge_tts(text, output_file, voice="ko-KR-SunHiNeural", speed=1.0):
-    """ 동기(Sync) 장고 뷰에서 비동기(Async) edge-tts를 실행하기 위한 헬퍼 함수 """
-    
-    # 프론트엔드의 1.0, 1.5 같은 배수를 edge-tts용 퍼센트 문자열(+50%, -20% 등)로 자동 변환
     try:
         rate_percent = int((float(speed) - 1.0) * 100)
-        rate_str = f"{rate_percent:+d}%" # 예: +50%, -20%, +0%
+        rate_str = f"{rate_percent:+d}%" 
     except ValueError:
-        rate_str = "+0%" # 숫자가 아닌 이상한 값이 오면 기본 속도로 방어
+        rate_str = "+0%" 
 
     async def _generate():
         communicate = edge_tts.Communicate(text, voice, rate=rate_str)
@@ -30,57 +50,77 @@ def generate_edge_tts(text, output_file, voice="ko-KR-SunHiNeural", speed=1.0):
 
 
 # =================================================================
-# [TTS Generate] Edge-TTS 실제 연동 (Speed 파라미터 추가!)
+# [TTS Generate] 프론트엔드 구조 그대로, 백엔드에서 RVC 덮어씌우기
 # =================================================================
-
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def tts_generate(request):
     """ [POST] /api/v1/generate : 음성 생성 """
     text = request.data.get('text', '')
-    voice_code = request.data.get('voice', 'ko-KR-SunHiNeural') 
     
-    # 프론트에서 넘어온 speed 값 (안 보내면 기본값 1.0)
+    # 🚨 프론트에서는 "Trump", "Luffy" 등의 코드를 'voice'로 보냄
+    voice_model = request.data.get('voice', 'NELL_V11') 
     speed_val = request.data.get('speed', 1.0) 
-    
+
     if not text:
         return Response({"error": "텍스트를 입력해주세요."}, status=status.HTTP_400_BAD_REQUEST)
 
+    # 💡 백엔드 몰래 설정 가져오기 (피치값, 뼈대 목소리 종류)
+    char_config = CHARACTER_SETTINGS.get(voice_model, CHARACTER_SETTINGS["default"])
+    base_tts_voice = char_config["base_voice"]
+    pitch_val = char_config["pitch"]
+
     temp_dir = tempfile.gettempdir()
-    output_mp3 = os.path.join(temp_dir, f"output_edge_{os.getpid()}.mp3")
+    unique_id = uuid.uuid4().hex 
+    base_mp3 = os.path.join(temp_dir, f"base_{unique_id}.mp3")
+    final_wav = os.path.join(temp_dir, f"final_{unique_id}.wav")
 
     try:
-        # 1. Edge-TTS로 MP3 파일 저장 (speed 전달)
-        generate_edge_tts(text, output_mp3, voice=voice_code, speed=speed_val)
+        # 1. Edge-TTS로 뼈대 생성 (char_config에서 지정된 베이스 목소리로!)
+        generate_edge_tts(text, base_mp3, voice=base_tts_voice, speed=speed_val)
 
-        # 2. 프론트엔드로 파일 전송
-        f = open(output_mp3, 'rb')
-        return FileResponse(f, content_type='audio/mpeg')
+        # 2. RVC 변조 (프론트가 보낸 voice_model 이름으로 Voice 폴더에서 .pth 찾기)
+        convert_voice_with_rvc(
+            input_path=base_mp3,
+            output_path=final_wav,
+            model_name=voice_model,
+            pitch_adjust=pitch_val
+        )
+        
+        # 3. 임시 뼈대 삭제 (서버 용량 보호)
+        if os.path.exists(base_mp3):
+            os.remove(base_mp3)
+
+        # 4. 프론트로 결과물 던져주기
+        f = open(final_wav, 'rb')
+        return FileResponse(f, content_type='audio/wav')
 
     except Exception as e:
-        return Response({"error": f"Edge-TTS 변환 실패: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        if os.path.exists(base_mp3): os.remove(base_mp3)
+        if os.path.exists(final_wav): os.remove(final_wav)
+        return Response({"error": f"음성 변환 실패: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # =================================================================
-# [System & Voice] 서버 상태 및 목소리 목록 (명세서 1순위)
+# [System & Voice] 서버 상태 및 목소리 목록
 # =================================================================
-
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def health_check(request):
-    """ [GET] /health : 서버 상태 확인 """
     return Response({"status": "OK", "message": "Server is running smoothly."}, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def voice_list(request):
-    """ [GET] /api/voices : Edge-TTS 지원 목소리 목록 """
+    """ [GET] /api/voices : 지원하는 캐릭터(RVC) 목록으로 프론트엔드에 뿌려줌 """
     data = [
-        {"id": 1, "name": "선희 (SunHi)", "code": "ko-KR-SunHiNeural", "gender": "Female", "desc": "차분한 한국어 여성 음성", "img_url": "/static/sunhi.png"},
-        {"id": 2, "name": "인준 (InJoon)", "code": "ko-KR-InJoonNeural", "gender": "Male", "desc": "안정적인 한국어 남성 음성", "img_url": "/static/injoon.png"},
-        {"id": 3, "name": "아리아 (Aria)", "code": "en-US-AriaNeural", "gender": "Female", "desc": "자연스러운 미국 영어", "img_url": "/static/aria.png"},
-        {"id": 4, "name": "가이 (Guy)", "code": "en-US-GuyNeural", "gender": "Male", "desc": "신뢰감 있는 미국 영어", "img_url": "/static/guy.png"},
+        {"id": 1, "name": "트럼프 (Trump)", "code": "Trump", "gender": "Male", "desc": "강렬한 미국 전 대통령 음성", "img_url": "/static/trump.png"},
+        {"id": 2, "name": "조로 (Zoro)", "code": "Zoro", "gender": "Male", "desc": "무심하고 시크한 검사 음성", "img_url": "/static/zoro.png"},
+        {"id": 3, "name": "루피 (Luffy)", "code": "Luffy", "gender": "Male", "desc": "텐션 높은 애니메이션 주인공", "img_url": "/static/luffy.png"},
+        {"id": 4, "name": "엠제이 (MJ)", "code": "MJ", "gender": "Male", "desc": "부드럽고 개성 있는 음성", "img_url": "/static/mj.png"},
+        {"id": 5, "name": "넬 (NELL)", "code": "NELL", "gender": "Female", "desc": "차분하고 매력적인 여성 음성", "img_url": "/static/nell.png"},
+        {"id": 6, "name": "얀데레 (Yandere)", "code": "Yandere", "gender": "Female", "desc": "집착이 느껴지는 톤", "img_url": "/static/yandere.png"},
     ]
     return Response({"count": len(data), "results": data}, status=status.HTTP_200_OK)
 
