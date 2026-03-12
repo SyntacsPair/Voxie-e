@@ -19,10 +19,10 @@ RUN apt-get update && \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-# 5. 파이썬 라이브러리 설치 (pip 버전을 살짝 조정해서 호환성 확보)
+# 5. 파이썬 라이브러리 설치 (CPU 전용 강조)
 COPY requirements.txt .
 RUN pip install --no-cache-dir "pip<24.1" && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
 
 # 6. 소스 코드 복사
 COPY . .
